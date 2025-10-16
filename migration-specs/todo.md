@@ -773,6 +773,564 @@ Return both file contents if created/updated.
 
 ---
 
-You’re set. This spec gives an agent everything needed to **refactor Spec-Kit into Prompt Kit** with the features, commands, safety guarantees, and language-specific conventions we defined.
-::contentReference[oaicite:0]{index=0}
+## 18) Architectural Decisions & Clarifications
+
+### 18.1 Agent Execution Model (Critical)
+
+**How `/execute` works:**
+
+`/execute` is a **slash command** (like `/specify`, `/plan`) that acts as a smart prompt invoker.
+
+**Flow:**
+1. User types in agent chat: `/execute DTO-Synchronizer --phase generate-dto`
+2. The `/execute` command (defined in `.claude/commands/execute.md`, etc.):
+   - Reads `/prompts/DTO-Synchronizer/1.0.0/manifest.yaml`
+   - Resolves inputs interactively (with history caching)
+   - References the prompt file: `@prompts/DTO-Synchronizer/1.0.0/generate-dto.prompt.md`
+   - Agent executes the prompt with parameters
+3. Agent generates code files
+4. `/execute` command automatically applies **all housekeeping**:
+   - Injects trace headers
+   - Archives overwritten files
+   - Writes execution log
+   - Runs compilation validation
+
+**Key principle:** `/execute` is end-to-end. Prompt invocation + file generation + housekeeping happen in one command.
+
+**Agent integration:** Uses agent's file reference capability (`@filename.prompt.md` syntax) to load and execute prompts.
+
+### 18.2 Git & Directory Structure
+
+**Prompts are committed to git in feature branches:**
+
 ```
+Branch: 001-dto-synchronizer
+
+/specs/001-dto-synchronizer/
+  spec.md
+  plan.md
+  tasks.md
+
+/prompts/DTO-Synchronizer/
+  /1.0.0/
+    manifest.yaml
+    generate-dto.prompt.md
+    verify-dto.prompt.md
+  /1.1.0/
+    manifest.yaml
+    ...
+
+/.claude/commands/
+  specify.md
+  execute.md
+  merge.md
+  ...
+
+/logs/           ← gitignored
+/archive/        ← gitignored
+```
+
+**Versioning strategy:**
+- Prompt series versions (1.0.0, 1.1.0) committed to git
+- Execution logs and archives gitignored (local only)
+- Each version folder is immutable once executed
+
+### 18.3 Multi-Language Support
+
+**Auto-detection from file extension:**
+
+```yaml
+# No explicit language declaration needed
+# Inferred from targetPath:
+*.cs       → C# rules (partial classes, virtual methods, *.Custom.cs)
+*.tsx      → React rules (*.generated.tsx, *.custom.tsx)
+*.ts       → TypeScript rules (*.generated.ts, *.custom.ts)
+*.sql      → SQL (no special split, manual management)
+```
+
+**SQL handling:**
+- Generate SQL files as-is
+- No `.generated.sql` / `.custom.sql` split
+- Too complex to preserve manual SQL changes safely
+- Users manage SQL migrations manually
+
+**Supported languages (initial):**
+- C# (partial classes, virtual methods)
+- React + TypeScript (generated/custom split)
+- SQL (basic generation, no preservation guarantees)
+
+### 18.4 Input Resolution
+
+**Interactive prompts with history caching:**
+
+```bash
+/execute DTO-Synchronizer --phase generate-dto
+
+# Agent prompts for inputs:
+> Enter entityName (last: Building): _
+> Enter sourcePath (last: Server/Models/Building.cs): _
+> Enter targetPath (last: Server/DTOs/BuildingDto.cs): _
+
+# History cached in:
+.promptkit/history.json
+{
+  "DTO-Synchronizer": {
+    "1.0.0": {
+      "generate-dto": {
+        "entityName": "Building",
+        "sourcePath": "Server/Models/Building.cs",
+        "targetPath": "Server/DTOs/BuildingDto.cs",
+        "timestamp": "2025-10-15T22:00:00Z"
+      }
+    }
+  }
+}
+```
+
+**Optional override:**
+```bash
+/execute DTO-Synchronizer --phase generate-dto --input entityName=Room --input targetPath=Server/DTOs/RoomDto.cs
+```
+
+### 18.5 Compilation Validation
+
+**Auto-detect project from generated file:**
+
+1. Generate file: `Server/DTOs/BuildingDto.cs`
+2. Scan upward for `.csproj` or `.sln`
+3. Run: `dotnet build <detected-project> --no-restore`
+4. Log result to execution log
+5. On failure: stop, leave files in place, show errors
+
+**For TypeScript:**
+1. Generate file: `client/src/components/BuildingCard.generated.tsx`
+2. Scan upward for `package.json` with `typescript` dependency
+3. Run: `npx tsc --noEmit` or `npm run type-check` (if script exists)
+4. Log result
+
+**Note:** Might compile unrelated files. Future enhancement: scope compilation to specific files.
+
+### 18.6 Version Bumping Strategy (/merge)
+
+**Automatic semantic versioning based on change analysis:**
+
+```bash
+/merge DTO-Synchronizer 1.0.0 @add-edit-dto.md
+
+# Analysis:
+- 3 phases added (generate-edit-dto, verify-edit-dto, generate-repo)
+- 1 phase modified (generate-dto - added property)
+- 0 phases removed
+
+# Decision:
+Added phases → MINOR bump: 1.0.0 → 1.1.0
+
+# Optional override:
+/merge DTO-Synchronizer 1.0.0 @add-edit-dto.md --version 2.0.0
+```
+
+**Rules:**
+- Added phases → minor bump (1.0.0 → 1.1.0)
+- Modified phases only → patch bump (1.0.0 → 1.0.1)
+- Removed phases → major bump (1.0.0 → 2.0.0)
+- `--version X.Y.Z` overrides automatic decision
+
+### 18.7 Migration Strategy (/migrate)
+
+**Smart diff by default, interactive review optional:**
+
+```bash
+# Default: Smart diff
+/migrate DTO-Synchronizer --from 1.0.0 --to 1.1.0
+
+# Compare prompts:
+- generate-dto: prompt changed → regenerate BuildingDto.cs
+- verify-dto: unchanged → skip
+- generate-edit-dto: new phase → generate new files
+
+# Preserve manual files:
+- BuildingDto.Custom.cs → never touched
+- BuildingCard.custom.tsx → never touched
+
+# Interactive mode:
+/migrate DTO-Synchronizer --from 1.0.0 --to 1.1.0 --interactive
+
+Phases changed:
+  ✓ generate-dto (modified) - regenerate? [y/N]: y
+  ✓ verify-dto (unchanged) - skip
+  + generate-edit-dto (new) - generate? [Y/n]: Y
+```
+
+**Safety guarantees:**
+- Only regenerate files where prompt actually changed
+- Never touch manual extension files (*.Custom.cs, *.custom.tsx)
+- Archive old generated files before overwriting
+
+### 18.8 Error Recovery
+
+**Stop on error by default, with optional continue mode:**
+
+```bash
+/execute DTO-Synchronizer
+
+Phase 1: generate-entity ✅
+Phase 2: verify-entity ✅
+Phase 3: generate-dto ❌ Compilation failed
+  Error: CS0246: The type 'Building' could not be found
+
+Execution stopped. Fix errors and re-run:
+  /execute DTO-Synchronizer
+
+# Optional: Continue on errors
+/execute DTO-Synchronizer --continue-on-error
+
+Phase 3: generate-dto ❌ Compilation failed
+Phase 4: verify-dto ⚠️ Skipped (depends on phase 3)
+Phase 5: generate-controller ✅
+
+Summary: 2 succeeded, 1 failed, 1 skipped
+```
+
+**Flags:**
+- Default: `--stop-on-error` (halt on first failure)
+- Optional: `--continue-on-error` (mark failed, continue)
+- Optional: `--skip-compilation` (skip build validation)
+
+**No explicit resume:** Re-running `/execute` is idempotent (checks trace headers, skips completed phases).
+
+### 18.9 Constitution Hierarchy
+
+**Hierarchical with merge/override:**
+
+```yaml
+# Root: /promptkit.constitution.yaml
+targets: [csharp, react-typescript, sql]
+defaultAgent: claude
+compilation:
+  csharp:
+    command: "dotnet build"
+    
+# Server override: /server/promptkit.constitution.yaml
+extends: ../promptkit.constitution.yaml
+targets: [csharp, sql]  # override
+compilation:
+  csharp:
+    command: "dotnet build Server.sln --no-restore"  # override
+    
+# Client override: /client/promptkit.constitution.yaml
+extends: ../promptkit.constitution.yaml
+targets: [react-typescript]  # override
+```
+
+**Resolution:**
+1. Search upward from current directory
+2. Load all constitutions in path
+3. Merge with child overriding parent
+
+### 18.10 Prompt Template Distribution
+
+**Downloaded from GitHub releases (like current Spec Kit):**
+
+```bash
+# During project init:
+prompt-kit init my-project --ai claude
+
+# Downloads from GitHub releases:
+- prompt-kit-templates-claude-v1.0.0.zip
+  └── .claude/commands/
+      specify.md
+      execute.md
+      merge.md
+      ...
+
+# Templates bundled in release:
+- templates/
+    csharp/
+      prompt-generation.hbs
+      prompt-verification.hbs
+    react/
+      prompt-generation.hbs
+      ...
+```
+
+**Customization:**
+- User can modify templates locally
+- `/implement` reads from project templates first, falls back to bundled
+
+### 18.11 Agent Command Files
+
+**Yes, continue generating agent-specific command files:**
+
+```
+/.claude/commands/
+  specify.md          ← keep
+  clarify.md          ← keep
+  plan.md             ← keep
+  tasks.md            ← keep
+  implement.md        ← MODIFIED (generates prompts)
+  execute.md          ← NEW
+  validate.md         ← NEW
+  merge.md            ← NEW (experimental flag)
+  migrate.md          ← NEW (experimental flag)
+
+/.cursor/commands/
+  [same structure]
+
+/.gemini/commands/
+  [same in TOML format]
+```
+
+**Backward compatible:** Existing commands work as before.
+
+### 18.12 Discovery Commands
+
+**Both CLI and agent slash commands:**
+
+**CLI (terminal):**
+```bash
+prompt-kit list                        # all series in project
+prompt-kit show DTO-Synchronizer       # versions & phases
+prompt-kit history DTO-Synchronizer    # execution logs
+prompt-kit diff DTO-Synchronizer 1.0.0 1.1.0  # compare versions
+```
+
+**Agent slash commands (in chat):**
+```
+/promptkit.list
+/promptkit.show DTO-Synchronizer
+/promptkit.history DTO-Synchronizer 1.0.0
+/promptkit.diff DTO-Synchronizer 1.0.0 1.1.0
+```
+
+### 18.13 Log Management
+
+**Manual cleanup (simple approach):**
+
+```
+/logs/              ← gitignored
+  2025-10-15/
+    09-30-45_DTO-Synchronizer_execute.json
+    10-15-22_DTO-Synchronizer_validate.json
+  2025-10-16/
+    ...
+```
+
+**No automatic deletion.** User manages logs manually:
+```bash
+# User can delete old logs:
+rm -rf logs/2025-09-*
+
+# Or keep for audit trail
+```
+
+**Future enhancement:** Add retention policy in constitution.
+
+### 18.14 Backward Compatibility
+
+**Clean break - Prompt Kit is a new tool:**
+
+```bash
+# Old tool (maintained separately):
+specify init my-project
+specify check
+
+# New tool:
+prompt-kit init my-project
+prompt-kit check
+```
+
+**No automatic migration path.** Users choose when to adopt Prompt Kit.
+
+**Rationale:** Architecture is fundamentally different. Clean separation avoids confusion.
+
+### 18.15 Critical Test Scenarios (Must Pass for v1.0)
+
+**All 4 scenarios must work:**
+
+**Scenario A: Basic Round-Trip**
+```bash
+/specify @simple-dto.md
+/plan
+/tasks
+/implement                # creates prompts
+/execute DTO-Sync 1.0.0   # generates files
+/validate DTO-Sync 1.0.0  # verifies
+
+Checks:
+✓ Prompts created with valid frontmatter
+✓ Files generated with trace headers
+✓ Archives created for overwritten files
+✓ Logs written to /logs/
+✓ Compilation ran and passed
+✓ Verification checklist complete
+```
+
+**Scenario B: Multi-Language Full-Stack**
+```bash
+# Spec includes C# + React + SQL
+/implement                # creates 15 phases
+/execute FullStack 1.0.0  # generates all
+
+Files created:
+✓ Building.cs (entity)
+✓ BuildingDto.cs (partial class)
+✓ BuildingDto.Custom.cs (empty partial)
+✓ BuildingController.cs (partial class)
+✓ BuildingCard.generated.tsx
+✓ BuildingCard.custom.tsx (empty)
+✓ 001-create-building-table.sql
+
+Manual edits:
+User adds validation to BuildingDto.Custom.cs
+User adds styling to BuildingCard.custom.tsx
+
+Re-execute:
+/execute FullStack 1.0.0
+✓ Manual files preserved
+✓ Generated files updated
+```
+
+**Scenario C: Evolution & Migration**
+```bash
+# Working v1.0.0
+/execute DTO-Sync 1.0.0
+✓ Files generated
+
+# Add features
+/merge DTO-Sync 1.0.0 @add-edit-feature.md
+✓ v1.1.0 created
+✓ Old prompts archived
+✓ New prompts added
+✓ Modified prompts updated
+✓ Manifest updated
+
+# Upgrade code
+/migrate DTO-Sync --from 1.0.0 --to 1.1.0
+✓ Smart diff identifies changed prompts
+✓ Regenerates only affected files
+✓ Preserves manual extensions
+✓ Archives old files
+✓ Compilation passes
+```
+
+**Scenario D: Error Recovery**
+```bash
+/execute DTO-Sync 1.0.0
+
+Phase 5 generates invalid C#:
+✓ Compilation fails
+✓ Execution stops
+✓ Error logged to /logs/
+✓ Archives preserved
+✓ Clear error message shown
+
+User fixes:
+Manual edit to BuildingDto.cs
+
+Re-run:
+/execute DTO-Sync 1.0.0
+✓ Detects fixed file
+✓ Continues execution
+✓ Success
+```
+
+### 18.16 Implementation Phases (Feature Flags)
+
+**Ship all commands, mark complex ones as experimental:**
+
+**v1.0 Release:**
+```bash
+prompt-kit /specify          # ✅ stable
+prompt-kit /clarify          # ✅ stable
+prompt-kit /plan             # ✅ stable
+prompt-kit /tasks            # ✅ stable
+prompt-kit /implement        # ✅ stable
+prompt-kit /execute          # ✅ stable
+prompt-kit /validate         # ✅ stable
+prompt-kit /merge            # ⚠️ experimental
+prompt-kit /migrate          # ⚠️ experimental
+```
+
+**Experimental warnings:**
+```bash
+/merge DTO-Synchronizer 1.0.0 @new-specs.md
+
+⚠️  WARNING: This command is experimental and may change in future versions.
+    Backup your prompts before proceeding.
+    
+Continue? [y/N]:
+```
+
+**Graduation criteria:**
+- All test scenarios pass
+- Used in at least 3 real projects
+- No critical bugs for 2 weeks
+- Remove experimental flag in v1.1 or v1.2
+
+### 18.17 Out of Scope for v1.0
+
+**Explicitly NOT included in initial release:**
+
+- ❌ Cloud integrations (Azure DevOps, GitHub Actions)
+- ❌ GUI dashboards or web interface
+- ❌ Languages beyond C#/React/SQL (Python, Go, Java)
+- ❌ Automatic prompt optimization
+- ❌ AI-powered prompt generation (prompts are still manually authored)
+- ❌ Team collaboration features (conflicts, locks)
+- ❌ Advanced analytics (usage metrics, quality scores)
+- ❌ Plugin system for custom languages
+- ❌ Automatic log retention/cleanup
+- ❌ Distributed execution (multi-machine)
+
+**Extensibility hooks provided:**
+- Constitution can specify new targets
+- Agent adapters are pluggable
+- Template system is customizable
+- Housekeeping modules are isolated
+
+---
+
+## 19) Updated Acceptance Criteria (with clarifications)
+
+All criteria from §11 remain valid, with these additions:
+
+**Additional criteria:**
+
+8. **Multi-language support verified**
+   - C# + React + SQL in single series
+   - Correct file patterns applied per language
+   - Manual extensions preserved per language rules
+
+9. **Interactive input resolution works**
+   - History cached to `.promptkit/history.json`
+   - Previous values suggested
+   - Override via `--input` flag supported
+
+10. **Error modes handled**
+    - Stop on error (default)
+    - Continue on error (optional)
+    - Clear error messages with recovery instructions
+
+11. **Discovery commands work**
+    - CLI: `prompt-kit list`, `show`, `history`
+    - Agent: `/promptkit.list`, `/promptkit.show`, etc.
+
+12. **Constitution hierarchy respected**
+    - Root + override constitutions
+    - Merge strategy correct
+    - Compilation commands per project
+
+13. **Agent command files generated**
+    - All commands available as slash commands
+    - Per-agent format correct (.md vs .toml)
+    - Experimental flags shown in command descriptions
+
+14. **All 4 critical scenarios pass**
+    - Scenario A: Basic round-trip
+    - Scenario B: Multi-language full-stack
+    - Scenario C: Evolution & migration
+    - Scenario D: Error recovery
+
+---
+
+You're set. This spec gives an agent everything needed to **refactor Spec-Kit into Prompt Kit** with the features, commands, safety guarantees, and language-specific conventions we defined.
