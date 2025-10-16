@@ -1,52 +1,79 @@
-🚀 Prompt Kit — Prompt-Driven Software Generation Framework
-“From human specifications to verifiable, versioned, and traceable AI-generated code.”
+# 🚀 Prompt Kit — Prompt-Driven Software Generation Framework
 
-🧩 1️⃣️⃣ The Problem
+> "From human specifications to verifiable, versioned, and traceable AI-generated code."
+
+---
+
+## 🧩 1. The Problem
+
 AI coding assistants (Copilot, Cursor, Claude Code…) boost productivity but lack structure, traceability, and governance.
+
 Teams struggle with:
-	• No clear mapping between specifications and generated code
-	• Manual edits break generated logic with no re-verification mechanism
-	• Inconsistent agent behavior and code style
-	• No auditable record of what the AI produced or changed
+- No clear mapping between specifications and generated code
+- Manual edits break generated logic with no re-verification mechanism
+- Inconsistent agent behavior and code style
+- No auditable record of what the AI produced or changed
 
-💡 2️⃣️⃣ The Solutio— Prompt Kitit
+---
+
+## 💡 2. The Solution — Prompt Kit
+
 Prompt Kit transforms prompting into a governed engineering process.
-Inspired by GitHub’s Spec-Kit, it re-imagines the idea for Prompt-Driven Generation (PDG).
-Instead of directly generating code and tests, Prompt Kit produces structured prompt series — reusable, parameterized instructions that generate and verify software through governed AI execution.
 
-🧱 3️⃣️⃣ Governance Pillars
-Pillar	Definition	Benefit
-🧾 Logging	Every execution records inputs, outputs, agent used, and compile results.	Reproducibility
-🔗 Traceability	Each generated file includes headers with series/version/agent metadata.	Auditability
-🗂️ Versioning	All AI-altered files and prompts are archived before updates.	Rollback safety
-🧱 Compilation Validation	Code is compiled post-generation to guarantee syntactic integrity.	Trust
-Together they make Prompt Kit a CI/CD-grade AI development system.
+Inspired by GitHub's Spec-Kit, it re-imagines the idea for Prompt-Driven Generation (PDG). Instead of directly generating code and tests, Prompt Kit produces **structured prompt series** — reusable, parameterized instructions that generate and verify software through governed AI execution.
 
-🔄 4️⃣️⃣ Lifecycle Overview
-Creation Flow
+---
+
+## 🧱 3. Governance Pillars
+
+| Pillar | Definition | Benefit |
+|--------|------------|---------|
+| 🧾 **Logging** | Every execution records inputs, outputs, agent used, and compile results | Reproducibility |
+| 🔗 **Traceability** | Each generated file includes headers with series/version/agent metadata | Auditability |
+| 🗂️ **Versioning** | All AI-altered files and prompts are archived before updates | Rollback safety |
+| 🧱 **Compilation Validation** | Code is compiled post-generation to guarantee syntactic integrity | Trust |
+
+Together they make Prompt Kit a **CI/CD-grade AI development system**.
+
+---
+
+## 🔄 4. Lifecycle Overview
+
+### Creation Flow
+```
 /specify   → define developer specs
 /clarify   → resolve ambiguities
-/plan     → produce task roadmap
-/tasks    → summarize actionable steps
+/plan      → produce task roadmap
+/tasks     → summarize actionable steps
 /implement → emit prompt series (generation + verification)
+```
 
-Operational Flow
+### Operational Flow
+```
 /execute   → run prompt series (full or partial)
 /validate  → re-run verifications anytime
-/merge    → extend existing series with new specs (version bump)
-/migrate  → re-generate code to new prompt version
+/merge     → extend existing series with new specs (version bump)
+/migrate   → re-generate code to new prompt version
+```
 
+---
 
-🧠 5️⃣️⃣ Prompt Series Structure
+## 🧠 5. Prompt Series Structure
+
+```
 /prompts/
   /DTO-Synchronizer/
-     /1.3.8/
-        manifest.yaml
-        generate-dto.prompt.md
-        verify-dto.prompt.md
+    /1.3.8/
+      manifest.yaml
+      generate-dto.prompt.md
+      verify-dto.prompt.md
 /logs/
 /archive/
+```
+
 Each prompt file defines metadata:
+
+```yaml
 ---
 id: generate-dto
 series: DTO-Synchronizer
@@ -56,104 +83,161 @@ inputs:
   - entityName
   - targetPath
 ---
+```
 
-⚙️ 6️⃣ Key Commands
-/implement — Create Prompt Series
-Creates prompt templates and manifest from planned tasks.
-Does not generate code — only prompt instructions.
+---
 
-/execute — Run Generation Pipeline
+## ⚙️ 6. Key Commands
+
+### `/implement` — Create Prompt Series
+
+Creates prompt templates and manifest from planned tasks.  
+**Does not generate code** — only prompt instructions.
+
+### `/execute` — Run Generation Pipeline
+
+```bash
 prompt-kit /execute <series> [version]
   [--from <start>] [--to <end>] 
   [--only a,b] [--skip x,y] 
-  [--interactive|--non-interactive] [--agent claude]
+  [--interactive|--non-interactive] 
+  [--agent claude]
+```
+
 Runs generation and verification prompts, asks for missing inputs, applies the four pillars, logs and compiles.
 
-/validate — Re-Run Verification Prompts
+### `/validate` — Re-Run Verification Prompts
+
+```bash
 prompt-kit /validate <series> [version] [--only a,b]
+```
+
 Checks that manual or external changes did not break generated contracts.
 
-/merge — Evolve Existing Prompt Series
-prompt-kit /merge <series> [version] @newSpecs.md
-🧠 The edit mode of /specify.
-Flow
-	1. Load existing series (manifest + prompts).
-	2. Run /clarify → /plan → / tasks → /implement in update mode.
-	3. Perform housekeeping:
-• Backup current prompts → /archive
-• Create new version folder
-• Modify or extend prompt files
-• Inject headers with Merged From and timestamp
-	4. Optionally compile for validation.
-	5. Log changes (added / modified / removed).
+### `/merge` — Evolve Existing Prompt Series
 
-/migrate — Upgrade Generated Code
+```bash
+prompt-kit /merge <series> [version] @newSpecs.md
+```
+
+🧠 *The edit mode of `/specify`.*
+
+**Flow:**
+1. Load existing series (manifest + prompts)
+2. Run `/clarify → /plan → /tasks → /implement` in update mode
+3. Perform housekeeping:
+   - Backup current prompts → `/archive`
+   - Create new version folder
+   - Modify or extend prompt files
+   - Inject headers with "Merged From" and timestamp
+4. Optionally compile for validation
+5. Log changes (added / modified / removed)
+
+### `/migrate` — Upgrade Generated Code
+
+```bash
 prompt-kit /migrate <series> --from <old> --to <new> [--scope path|phase|all]
+```
+
 Detects old-version trace headers, re-runs equivalent prompts from the new version, and regenerates safe scaffolds while preserving manual code.
 
-🔁 7️⃣️⃣ Command Relationships
-Command	Affects	Pipeline	Scope
-/specify	Prompts	Yes	Create new series
-/merge	Prompts	Yes	Update existing series
-/execute	Code	No	Generate artifacts
-/validate	Code	No	Verify artifacts
-/migrate	Code	No	Upgrade artifacts
+---
 
-🧩 8️⃣️⃣ Execution Granularity
-Option	Meaning
---phase	Run single phase
---from / --to	Run range of phases
---only / --skip	Include or exclude phases
---interactive	Ask inputs
---non-interactive	Use cached defaults
---agent	Override default agent
+## 🔁 7. Command Relationships
 
-🧱 9️⃣️⃣ Versioning and Traceability
+| Command | Affects | Pipeline | Scope |
+|---------|---------|----------|-------|
+| `/specify` | Prompts | Yes | Create new series |
+| `/merge` | Prompts | Yes | Update existing series |
+| `/execute` | Code | No | Generate artifacts |
+| `/validate` | Code | No | Verify artifacts |
+| `/migrate` | Code | No | Upgrade artifacts |
+
+---
+
+## 🧩 8. Execution Granularity
+
+| Option | Meaning |
+|--------|---------|
+| `--phase` | Run single phase |
+| `--from` / `--to` | Run range of phases |
+| `--only` / `--skip` | Include or exclude phases |
+| `--interactive` | Ask for inputs |
+| `--non-interactive` | Use cached defaults |
+| `--agent` | Override default agent |
+
+---
+
+## 🧱 9. Versioning and Traceability
+
 Every artifact carries metadata:
+
+```csharp
 // <auto-generated>
-// Created by Prompt Kit v2.0.0 (Prompt-Driven Generation)
+// This file was generated by Prompt Kit v2.0.0 (Prompt-Driven Generation)
+// </auto-generated>
+// Created on: 2025-10-15 23:04:00
 // Series: DTO-Synchronizer
 // Version: 1.4.0
 // Source Spec: @add-edit-dto.md
 // Generated by: claude-3.5-sonnet
-// </auto-generated>
-All previous versions backed up to /archive/series/version/.
-Logs written to /logs/YYYY-MM-DD/<series>_run.json.
+```
 
-🧱 🔟 Example Lifecycle
+- All previous versions backed up to `/archive/series/version/`
+- Logs written to `/logs/YYYY-MM-DD/<series>_run.json`
+
+---
+
+## 🔟 10. Example Lifecycle
+
+```bash
+# Create initial series
 prompt-kit /specify @FullLayerSpec.md
 prompt-kit /clarify
 prompt-kit /plan
 prompt-kit /tasks
 prompt-kit /implement
 prompt-kit /execute FullLayer 1.0.0
+
 # Extend behavior
 prompt-kit /merge FullLayer 1.0.0 @AddEditFlowSpec.md
 prompt-kit /execute FullLayer 1.1.0
+
 # Re-verify and upgrade
 prompt-kit /validate FullLayer 1.1.0
 prompt-kit /migrate FullLayer --from 1.0.0 --to 1.1.0
+```
 
-🧭 11️⃣️⃣ Human-Safe Generation Architecture
-Goal
-AI-generated files must be regenerable without overwriting human extensions.
+---
+
+## 🧭 11. Human-Safe Generation Architecture
+
+### Goal
+
+AI-generated files must be regenerable without overwriting human extensions.  
 Prompt Kit enforces language-specific patterns to protect developer code.
 
-C# Rules
-Aspect	Rule
-Classes	Always partial
-Methods	Generated methods are virtual
-Custom Files	*.Custom.cs added automatically
-Migration	/migrate ignores *.Custom.cs
-Manual Edits	Developers extend via partials/overrides only
-Example
-// BuildingDto.cs  (auto-generated)
+### C# Rules
+
+| Aspect | Rule |
+|--------|------|
+| **Classes** | Always partial |
+| **Methods** | Generated methods are virtual |
+| **Custom Files** | `*.Custom.cs` added automatically |
+| **Migration** | `/migrate` ignores `*.Custom.cs` |
+| **Manual Edits** | Developers extend via partials/overrides only |
+
+**Example:**
+
+```csharp
+// BuildingDto.cs (auto-generated)
 public partial class BuildingDto
 {
   public int Id { get; set; }
   public virtual void Validate() { /* generated */ }
 }
-// BuildingDto.Custom.cs  (user code)
+
+// BuildingDto.Custom.cs (user code)
 public partial class BuildingDto
 {
   public override void Validate()
@@ -163,19 +247,27 @@ public partial class BuildingDto
       throw new ValidationException("Name cannot be empty.");
   }
 }
-✅ /migrate updates only BuildingDto.cs; BuildingDto.Custom.cs remains untouched.
+```
 
-React + TypeScript Rules
-Aspect	Rule
-Components	Split into *.generated.tsx and *.custom.tsx
-Exports	index.tsx combines both
-Hooks	Generated hooks are pure/stateless
-Migration	Only *.generated.* files overwritten
-Example
+✅ `/migrate` updates only `BuildingDto.cs`; `BuildingDto.Custom.cs` remains untouched.
+
+### React + TypeScript Rules
+
+| Aspect | Rule |
+|--------|------|
+| **Components** | Split into `*.generated.tsx` and `*.custom.tsx` |
+| **Exports** | `index.tsx` combines both |
+| **Hooks** | Generated hooks are pure/stateless |
+| **Migration** | Only `*.generated.*` files overwritten |
+
+**Example:**
+
+```tsx
 // BuildingList.generated.tsx
 export const BuildingList = ({ buildings }: { buildings: Building[] }) => (
   <ul>{buildings.map(b => <li key={b.id}>{b.name}</li>)}</ul>
 );
+
 // BuildingList.custom.tsx
 import { BuildingList } from './BuildingList.generated';
 export const BuildingListExtended = (props) => (
@@ -184,36 +276,56 @@ export const BuildingListExtended = (props) => (
     <BuildingList {...props} />
   </div>
 );
-✅ During migration or merge, .generated.tsx files can change; .custom.tsx stay safe.
+```
 
-Housekeeping
-	• Detect headers or filename patterns (*.Custom.cs, *.custom.tsx)
-	• Never overwrite manual files during /migrate, /merge, or /execute
-	• Compile both base + custom files after regeneration
-	• Report any conflict but do not modify manual code
+✅ During migration or merge, `.generated.tsx` files can change; `.custom.tsx` stay safe.
 
-Manual Extension Schema in Prompts
+### Housekeeping
+
+- Detect headers or filename patterns (`*.Custom.cs`, `*.custom.tsx`)
+- Never overwrite manual files during `/migrate`, `/merge`, or `/execute`
+- Compile both base + custom files after regeneration
+- Report any conflict but do not modify manual code
+
+### Manual Extension Schema in Prompts
+
+```yaml
 manualExtension:
   pattern:
     csharp: "*.Custom.cs"
     react: "*.custom.tsx"
   strategy: preserve
   comment: "Add overrides here; Prompt Kit will ignore these files during migration."
+```
 
-✅ 12️⃣ Benefits Summary
-Aspect	Advantage
-Governance	Every AI action is logged and traceable
-Evolution	/merge and /migrate keep prompts and code in sync
-Safety	Manual code is never overwritten
-Flexibility	Partial/virtual patterns for C# and custom split for React
-Scalability	Granular phase execution and versioned series enable CI/CD integration
+---
 
-🔮 13️⃣️⃣ Strategic Summary
-	Prompt Kit gives AI development the same rigor CI/CD gave manual development.
-	Every prompt, generation, and change is traceable, verifiable, and safe for human collaboration.
-It bridges AI creativity and software engineering discipline.
+## ✅ 12. Benefits Summary
 
-🧠 14️⃣️⃣ Executive Pitch
-	“Prompt Kit turns AI-generated code into an auditable engineering asset.
-	We can generate, evolve, and migrate entire software layers without losing manual craftsmanship or traceability.
-	It’s the future of governed AI software development.”
+| Aspect | Advantage |
+|--------|-----------|
+| **Governance** | Every AI action is logged and traceable |
+| **Evolution** | `/merge` and `/migrate` keep prompts and code in sync |
+| **Safety** | Manual code is never overwritten |
+| **Flexibility** | Partial/virtual patterns for C# and custom split for React |
+| **Scalability** | Granular phase execution and versioned series enable CI/CD integration |
+
+---
+
+## 🔮 13. Strategic Summary
+
+**Prompt Kit gives AI development the same rigor CI/CD gave manual development.**
+
+Every prompt, generation, and change is traceable, verifiable, and safe for human collaboration. It bridges AI creativity and software engineering discipline.
+
+---
+
+## 🧠 14. Executive Pitch
+
+> *"Prompt Kit turns AI-generated code into an auditable engineering asset. We can generate, evolve, and migrate entire software layers without losing manual craftsmanship or traceability. It's the future of governed AI software development."*
+
+---
+
+<div align="center">
+  <strong>From Specifications to Production — Governed by Design</strong>
+</div>

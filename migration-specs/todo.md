@@ -1,7 +1,3 @@
-Amazing — here’s a **complete, agent-ready specification** for converting **github/spec-kit** into **Prompt Kit** exactly as we defined. It’s written for a capable repo-aware agent (Cursor/Claude/Copilot) to follow step-by-step. You can paste this into the agent and let it run the work in your fork.
-
----
-
 # Prompt Kit — Agent Implementation Spec (from GitHub/spec-kit)
 
 ## 0) Mission & Scope
