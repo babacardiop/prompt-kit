@@ -1,12 +1,20 @@
 <div align="center">
     <img src="./media/logo_small.webp"/>
-    <h1>🌱 Spec Kit</h1>
-    <h3><em>Build high-quality software faster.</em></h3>
+    <h1>🌱 Spec Kit → Prompt Kit</h1>
+    <h3><em>Build high-quality software faster with governed AI code generation.</em></h3>
 </div>
 
 <p align="center">
     <strong>An open source toolkit that allows you to focus on product scenarios and predictable outcomes instead of vibe coding every piece from scratch.</strong>
 </p>
+
+---
+
+> 🚀 **Evolution in Progress:** This project is evolving from **Spec Kit** (specification-driven development) into **Prompt Kit** (governed prompt-driven generation). We're adding traceability, versioning, human-safe code patterns, and execution governance while maintaining full backward compatibility with Spec Kit workflows.
+> 
+> 📋 [**Learn about the transformation →**](./migration-specs/summary.md)
+
+---
 
 <p align="center">
     <a href="https://github.com/github/spec-kit/actions/workflows/release.yml"><img src="https://github.com/github/spec-kit/actions/workflows/release.yml/badge.svg" alt="Release"/></a>
@@ -19,6 +27,7 @@
 
 ## Table of Contents
 
+- [🚀 What's Coming: Prompt Kit](#-whats-coming-prompt-kit)
 - [🤔 What is Spec-Driven Development?](#-what-is-spec-driven-development)
 - [⚡ Get Started](#-get-started)
 - [📽️ Video Overview](#️-video-overview)
@@ -36,11 +45,74 @@
 - [🙏 Acknowledgements](#-acknowledgements)
 - [📄 License](#-license)
 
+## 🚀 What's Coming: Prompt Kit
+
+We're evolving Spec Kit into **Prompt Kit** — a governed, auditable AI code generation system that transforms ad-hoc prompting into a **CI/CD-grade engineering process**.
+
+### The Evolution
+
+**Spec Kit (Current):**
+```
+Specification → AI → Code (one-shot, no traceability)
+```
+
+**Prompt Kit (Coming Soon):**
+```
+Specification → Prompt Series → Versioned Execution → Governed Code
+                 (reusable)      (auditable)          (regenerable)
+```
+
+### Four Non-Negotiable Pillars
+
+| Pillar | Benefit |
+|--------|---------|
+| 🧾 **Logging** | Every execution recorded (inputs, outputs, agent, compile results) for reproducibility |
+| 🔗 **Traceability** | Auto-generated headers in every file linking back to series/version/agent/prompt |
+| 🗂️ **Versioning** | Files archived before updates; prompt versions are immutable |
+| 🧱 **Compilation** | Post-generation compile validation guarantees syntactic correctness |
+
+### New Commands (Coming)
+
+- **`/execute`** - Run prompt series, generate code with full governance
+- **`/validate`** - Re-run verification prompts to detect manual breakage
+- **`/merge`** - Evolve existing prompt series with new specs (automatic version bumping)
+- **`/migrate`** - Upgrade generated code from old to new prompt versions
+
+### Human-Safe Code
+
+**The breakthrough:** AI can regenerate code without destroying your manual work.
+
+```csharp
+// BuildingDto.cs (AI-generated, safe to regenerate)
+public partial class BuildingDto { 
+  public int Id { get; set; }
+}
+
+// BuildingDto.Custom.cs (your code, never touched by AI)
+public partial class BuildingDto {
+  public override void Validate() {
+    // Your custom validation logic
+  }
+}
+```
+
+Works for C# (partial classes), React/TypeScript (`.generated.tsx` / `.custom.tsx` split), and more.
+
+### Learn More
+
+- **[Project Summary](./migration-specs/summary.md)** - Complete overview of the transformation
+- **[Implementation Spec](./migration-specs/todo.md)** - Detailed technical specification (1,300+ lines)
+- **[Concept Overview](./migration-specs/overview.md)** - Strategic vision and benefits
+
+---
+
 ## 🤔 What is Spec-Driven Development?
 
 Spec-Driven Development **flips the script** on traditional software development. For decades, code has been king — specifications were just scaffolding we built and discarded once the "real work" of coding began. Spec-Driven Development changes this: **specifications become executable**, directly generating working implementations rather than just guiding them.
 
 ## ⚡ Get Started
+
+> **Note:** The workflow below describes the current **Spec Kit** commands. New **Prompt Kit** commands (`/execute`, `/validate`, `/merge`, `/migrate`) with governance features are coming soon. See [What's Coming](#-whats-coming-prompt-kit) for details.
 
 ### 1. Install Specify CLI
 
@@ -607,6 +679,44 @@ echo "Cleaning up..."
 rm gcm-linux_amd64.2.6.1.deb
 ```
 
+---
+
+## 🛠️ Project Status & Roadmap
+
+### Current Status: Spec Kit (Stable)
+
+✅ **Production Ready**
+- Full Spec-Driven Development workflow
+- 13+ AI agent integrations
+- Multi-platform support (Linux, macOS, Windows)
+- Comprehensive documentation
+
+### Coming Soon: Prompt Kit (In Development)
+
+🚧 **Transformation in Progress**
+- Governance pillars (logging, traceability, versioning, compilation)
+- Human-safe code patterns (C#, React/TypeScript, SQL)
+- New commands (`/execute`, `/validate`, `/merge`, `/migrate`)
+- Backward compatible with Spec Kit workflows
+
+📋 **Implementation Spec Ready**
+- [Complete technical specification](./migration-specs/todo.md) (1,300+ lines)
+- All architectural decisions documented
+- Test scenarios defined
+- Ready for implementation
+
+### Get Involved
+
+We welcome contributions to both Spec Kit maintenance and Prompt Kit development:
+
+- 🐛 **Report bugs** - [Open an issue](https://github.com/github/spec-kit/issues/new)
+- 💡 **Request features** - Share your ideas for Prompt Kit
+- 📖 **Improve docs** - Help make our documentation better
+- 🔧 **Contribute code** - See [CONTRIBUTING.md](./CONTRIBUTING.md)
+- 💬 **Join discussions** - Share your Spec-Driven Development experiences
+
+---
+
 ## 👥 Maintainers
 
 - Den Delimarsky ([@localden](https://github.com/localden))
@@ -620,7 +730,17 @@ For support, please open a [GitHub issue](https://github.com/github/spec-kit/iss
 
 This project is heavily influenced by and based on the work and research of [John Lam](https://github.com/jflam).
 
+**Prompt Kit Evolution:** The transformation from Spec Kit to Prompt Kit represents the natural progression of specification-driven development into governed, auditable AI code generation. We're building on the solid foundation of Spec Kit while adding enterprise-grade governance features that make AI-generated code trustworthy, traceable, and safe to regenerate.
+
 ## 📄 License
 
 This project is licensed under the terms of the MIT open source license. Please refer to the [LICENSE](./LICENSE) file for the full terms.
+
+---
+
+<div align="center">
+  <strong>From Specifications to Production — Governed by Design</strong>
+  <br/>
+  <sub>Spec Kit today. Prompt Kit tomorrow. Excellence always.</sub>
+</div>
 
